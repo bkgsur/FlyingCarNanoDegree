@@ -24,6 +24,11 @@ class States(Enum):
 
 class MotionPlanning(Drone):
 
+    TARGET_LATITUDE = -122.401247
+    TARGET_LONGITUDE = -37.796738
+    TARGET_ALTITUDE = 5
+    SAFETY_DISTANCE = 5    
+
     def __init__(self, connection):
         super().__init__(connection)
 
@@ -113,52 +118,56 @@ class MotionPlanning(Drone):
 
     def plan_path(self):
         self.flight_state = States.PLANNING
-        print("Searching for a path ...")
-        TARGET_ALTITUDE = 5
-        SAFETY_DISTANCE = 5
+        print("Searching for a path ...")        
 
         args = parser.parse_args()
 
-        self.target_position[2] = TARGET_ALTITUDE
+        self.target_position[2] = self.TARGET_ALTITUDE
 
         with open("colliders.csv") as colliderhead:
-            head = [next(colliderhead) for x in range(1)]
-        latlon =  head[0].split(',')        
-        lat0 = float(latlon[0].split()[1])
-        lon0 = float(latlon[1].split()[1])
+            latitudelongitudeEntry = [next(colliderhead) for x in range(1)]
+        latitudelongitude =  latitudelongitudeEntry[0].split(',')        
+        lat0 = float(latitudelongitude[0].split()[1])
+        lon0 = float(latitudelongitude[1].split()[1])
      
-        self.set_home_position(lon0, lat0, 0) 
+        self.set_home_position(lat0, lon0, 0) 
+        # Global position
         global_position = self.global_position 
-        current_local_pos = global_to_local(self.global_position,self.global_home)
-        print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
-                                                                         self.local_position))
-        print('current local position {0}'.format(current_local_pos))
-        data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
-        grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)     
-        print("north offset, east offset",north_offset,east_offset)
-        grid_start = (-north_offset, -east_offset)
+
+        currentlocalpos = global_to_local(self.global_position,self.global_home)
+
+        print('global home {0}, global position {1}, local position {2}'.format(self.global_home, self.global_position, self.local_position))
+
+        # Get collision data
+        collision_data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
+
+        # build grid
+        grid, north_offset_value, east_offset_value = create_grid(collision_data, self.TARGET_ALTITUDE, self.SAFETY_DISTANCE)     
+
+        print("north offset value, east offset value",north_offset_value,east_offset_value)
+
+        grid_start = (-north_offset_value, -east_offset_value)
     
-        start = (int(current_local_pos[0]-north_offset), int(current_local_pos[1]-east_offset))
+        start = (int(currentlocalpos[0]-north_offset_value), int(currentlocalpos[1]-east_offset_value))
         
         print("Default Goal Location")
-        grid_goal_offset = global_to_local((-122.401247,37.796738,0),self.global_home)
+        grid_goal_offset = global_to_local((self.TARGET_LATITUDE,self.TARGET_LONGITUDE,0),self.global_home)
 
         print("grid_goal",grid_goal_offset)
-        grid_goal = (int(grid_goal_offset[0]-north_offset),int(grid_goal_offset[1]-east_offset))
+        grid_goal = (int(grid_goal_offset[0]-north_offset_value),int(grid_goal_offset[1]-east_offset_value))
        
 
         print('Local Start and Goal: ', start, grid_goal)
-        path, _ = a_star(grid, heuristic, start, grid_goal)       
-        pruned = self.prune_path(path)
+      
+        pruned= a_star(grid, heuristic, start, grid_goal)        
         print("pruned path",pruned)
-
-        waypoints = [[p[0] + int(north_offset), p[1] + int(east_offset),
+        waypoints = [[p[0] + int(north_offset_value), p[1] + int(east_offset_value),
             TARGET_ALTITUDE,0] for p in pruned]
         self.waypoints = waypoints
-        print("waypoints",waypoints)
-
-  
+        print("waypoints",waypoints)  
         self.send_waypoints()
+
+    
 
     def start(self):
         self.start_log("Logs", "NavLog.txt")

@@ -137,9 +137,34 @@ def a_star(grid, h, start, goal):
         print('**********************')
         print('Failed to find a path!')
         print('**********************') 
-    return path[::-1], path_cost
+    
+    return prune_path(path[::-1])
+
+def prune_path(path):
+        def point(p):
+            return np.array([p[0], p[1], 1.]).reshape(1, -1)
+
+        def collinearity_check(p1, p2, p3, epsilon=0.1):
+            m = np.concatenate((p1, p2, p3), 0)
+            det = np.linalg.det(m)
+            return abs(det) < epsilon
+        pruned_path = []
+        # check for colineraity
+        p1 = path[0]
+        p2 = path[1]
+        pruned_path.append(p1)
+        for i in range(2,len(path)):
+            p3 = path[i]
+            if collinearity_check(point(p1),point(p2),point(p3)):
+                p2 = p3
+            else:
+                pruned_path.append(p2)
+                p1 = p2
+                p2 = p3
+        pruned_path.append(p3)
 
 
+        return pruned_path
 
 def heuristic(position, goal_position):
     return np.linalg.norm(np.array(position) - np.array(goal_position))
