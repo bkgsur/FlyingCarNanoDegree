@@ -1,0 +1,12 @@
+Steps to complete the project (and check the rubri)
+	1 Read the latitiude and longitude(lat0,lon0)  from the first row of "Colliders.csv" and set it to the home position
+		self.set_home_position(lon0, lat0, 0) '
+    2 The start point (grid_start) and goal point (grid_goal) were hardcoded
+		
+	3 The udacidrone class internal methods used to set the  global_position and the global_to_local method used to convert 
+        them to ECEF 
+		
+	4  a_star algorithm is combined with the prune_path method to return the pruned paths
+        pruned_path = a_star(grid, grid_start, grid_goal)
+
+	5 - waypoints asre calculated then have been sent to autopilot 

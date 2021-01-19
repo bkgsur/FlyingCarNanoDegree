@@ -24,8 +24,6 @@ class States(Enum):
 
 class MotionPlanning(Drone):
 
-    TARGET_LATITUDE = -122.401247
-    TARGET_LONGITUDE = -37.796738
     TARGET_ALTITUDE = 5
     SAFETY_DISTANCE = 5    
 
