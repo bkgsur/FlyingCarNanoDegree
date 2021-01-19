@@ -88,7 +88,7 @@ def valid_actions(grid, current_node):
     return valid_actions
 
 
-def a_star(grid, h, start, goal):
+def a_star(grid, start, goal):
 
     path = []
     path_cost = 0
@@ -117,7 +117,7 @@ def a_star(grid, h, start, goal):
                 da = action.delta
                 next_node = (current_node[0] + da[0], current_node[1] + da[1])
                 branch_cost = current_cost + action.cost
-                queue_cost = branch_cost + h(next_node, goal)
+                queue_cost = branch_cost + heuristic(next_node, goal)
                 
                 if next_node not in visited:                
                     visited.add(next_node)               

@@ -114,56 +114,44 @@ class MotionPlanning(Drone):
     def send_waypoints(self):
         print("Sending waypoints to simulator ...")
         data = msgpack.dumps(self.waypoints)
-        self.connection._master.write(data)
+        self.connection._master.write(data)  
 
     def plan_path(self):
         self.flight_state = States.PLANNING
-        print("Searching for a path ...")        
+        print("Searching for a path ...")
+        TARGET_ALTITUDE = 5
+        SAFETY_DISTANCE = 5
+        # set arbitary start and goal positions
+        grid_start = (316,  316)
+        grid_goal = (750, 370)  
 
-        args = parser.parse_args()
-
-        self.target_position[2] = self.TARGET_ALTITUDE
-
+        self.target_position[2] = TARGET_ALTITUDE
+        # TODO: read lat0, lon0 from colliders into floating point values
+        # lat0, lon0 from csv file first row
         with open("colliders.csv") as colliderhead:
             latitudelongitudeEntry = [next(colliderhead) for x in range(1)]
         latitudelongitude =  latitudelongitudeEntry[0].split(',')        
         lat0 = float(latitudelongitude[0].split()[1])
         lon0 = float(latitudelongitude[1].split()[1])
-     
-        self.set_home_position(lat0, lon0, 0) 
-        # Global position
-        global_position = self.global_position 
-
-        currentlocalpos = global_to_local(self.global_position,self.global_home)
-
-        print('global home {0}, global position {1}, local position {2}'.format(self.global_home, self.global_position, self.local_position))
-
-        # Get collision data
-        collision_data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
-
-        # build grid
-        grid, north_offset_value, east_offset_value = create_grid(collision_data, self.TARGET_ALTITUDE, self.SAFETY_DISTANCE)     
-
-        print("north offset value, east offset value",north_offset_value,east_offset_value)
-
-        grid_start = (-north_offset_value, -east_offset_value)
-    
-        start = (int(currentlocalpos[0]-north_offset_value), int(currentlocalpos[1]-east_offset_value))
-        
-        print("Default Goal Location")
-        grid_goal_offset = global_to_local((self.TARGET_LATITUDE,self.TARGET_LONGITUDE,0),self.global_home)
-
-        print("grid_goal",grid_goal_offset)
-        grid_goal = (int(grid_goal_offset[0]-north_offset_value),int(grid_goal_offset[1]-east_offset_value))
-       
-
-        print('Local Start and Goal: ', start, grid_goal)
-      
-        pruned= a_star(grid, heuristic, start, grid_goal)        
-        print("pruned path",pruned)
-        waypoints = [[p[0] + int(north_offset_value), p[1] + int(east_offset_value),
-            TARGET_ALTITUDE,0] for p in pruned]
+        # TODO: set home position to (lon0, lat0, 0)
+        global_home = (lon0, lat0, 0)
+        self.set_home_position(lon0, lat0, 0) 
+        # Read the  obstacle map from the colliders.csv file
+        data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
+        # TODO: retrieve current global position
+        global_position = (self._longitude, self._latitude, self._altitude)
+        # TODO: convert to current local position using global_to_local()
+        local_position = global_to_local(global_position, global_home)             
+        # Define a grid 
+        grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)            
+        # using the grid set above, set path that is pruned for efficiency
+        pruned_path = a_star(grid, grid_start, grid_goal)
+        # Convert path to waypoints based on the pruned paths calculated above
+        waypoints = [[p[0] + north_offset, p[1] + east_offset, TARGET_ALTITUDE, 0] for p in pruned_path]
+        # Set self.waypoints
         self.waypoints = waypoints
+        # TODO: send waypoints to sim (this is just for visualization of waypoints)
+        self.send_waypoints()
         print("waypoints",waypoints)  
         self.send_waypoints()
 
